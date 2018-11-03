@@ -1,0 +1,14 @@
+// Protocol for the Exred GRPC server node
+
+syntax = "proto3";
+
+package exredrpc;
+
+service MessageBus {
+    rpc Chat(stream Msg) returns (stream Msg){}
+}
+
+message Msg {
+    map<string, string> payload = 2;
+    map<string, string> meta = 3;
+}
