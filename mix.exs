@@ -6,7 +6,7 @@ defmodule Exred.Node.GrpcServer.MixProject do
   def project do
     [
       app: :exred_node_grpc_server,
-      version: "0.1.1",
+      version: "0.1.2",
       elixir: "~> 1.7",
       start_permanent: Mix.env() == :prod,
       description: @description,
@@ -26,7 +26,7 @@ defmodule Exred.Node.GrpcServer.MixProject do
       {:ex_doc, "~> 0.19.0", only: :dev, runtime: false},
       {:exred_library, "~> 0.1"},
       {:stream_split, "~> 0.1.2"},
-      {:grpc, github: "tony612/grpc-elixir"},
+      {:grpc, "~> 0.3.0-alpha.2"},
       {:protobuf, "~> 0.5.3"},
       {:google_protos, "~> 0.1"}
     ]
