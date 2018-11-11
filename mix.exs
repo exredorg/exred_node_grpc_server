@@ -19,6 +19,8 @@ defmodule Exred.Node.GrpcServer.MixProject do
 
   defp deps do
     [
+      {:ex_doc, "~> 0.19.0", only: :dev, runtime: false},
+      {:exred_library, "~> 0.1"},
       {:stream_split, "~> 0.1.2"},
       {:grpc, github: "tony612/grpc-elixir"},
       {:protobuf, "~> 0.5.3"},
