@@ -49,7 +49,7 @@ defmodule Exred.Node.GrpcServer do
       {:error, reason} ->
         error_msg = "failed to start gRPC server: #{inspect(reason)}"
         event = %{node_id: state.node_id, node_name: @name, debug_data: %{msg: error_msg}}
-        state.send_event("notification", event)
+        state.send_event.("notification", event)
     end
 
     # start message broker
