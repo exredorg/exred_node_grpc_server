@@ -40,7 +40,7 @@ defmodule Exredrpc.Broker do
   Look up the bond struct based on the pid (from)
   and forward message to the exred node (ex_twin)
   """
-  @spec msg_from_ex(Exredrpc.Msg.t()) :: term
+  @spec msg_from_grpc(Exredrpc.Msg.t()) :: term
   def msg_from_grpc(msg) do
     GenServer.call(__MODULE__, {:grpc_incoming, msg})
   end
@@ -145,8 +145,8 @@ defmodule Exredrpc.Broker do
           {:error, :nonex_twin}
 
         {_, %Exredrpc.Bond{ex_twin: %Exredrpc.Twin.Ex{process: ex_node_pid}}} ->
-          rpcmsg = msg |> Enum.into(%{})
-          send(ex_node_pid, rpcmsg)
+          rpcmsg = Map.from_struct(msg)
+          send(ex_node_pid, {:grpc_incoming, rpcmsg})
           {:ok, :sent}
       end
 

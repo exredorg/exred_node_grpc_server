@@ -63,7 +63,7 @@ func main() {
 	}
 
 	// start sending and receiving goroutines
-  // these transfer messages between the the RPC streams and the incoming and outgoing channels
+  // these transfer messages between the RPC streams and the incoming and outgoing channels
 	go receiveMsg(incoming, rpcChatStream)
 	go sendMsg(outgoing, rpcChatStream)
 

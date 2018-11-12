@@ -21,11 +21,10 @@ defmodule Exredrpc.Server do
     # receive incoming messages from the stream and send them to the broker
     Enum.each(req_stream, fn req ->
       Logger.info("IN  #{inspect(req)}")
-      send Exredrpc.Broker, req
+      Exredrpc.Broker.msg_from_grpc(req)
     end)
 
     IO.puts("Chat rpc DONE")
     :ok
   end
-
 end
