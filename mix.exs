@@ -24,7 +24,8 @@ defmodule Exred.Node.GrpcServer.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.19.0", only: :dev, runtime: false},
-      {:exred_library, "~> 0.1"},
+      # {:exred_nodeprototype, "~> 0.1"},
+      {:exred_nodeprototype, path: "../exred_nodeprototype"},
       {:exredrpc, "~> 0.1"},
       {:stream_split, "~> 0.1.2"},
       {:grpc, "~> 0.3.0-alpha.2"},
