@@ -1,0 +1,21 @@
+@startuml
+skinparam componentStyle uml2
+
+component "GRPC Server" as server
+component sendMsg
+component receiveMsg
+
+() rpcChat
+
+server -- rpcChat
+
+rpcChat <-- sendMsg : GRPC\nstream
+rpcChat --> receiveMsg : GRPC\nstream
+
+component handleMsg
+component sendUpdates
+
+receiveMsg --> handleMsg : incoming\nchannel
+sendMsg <-- sendUpdates : outgoing\nchannel
+
+@enduml

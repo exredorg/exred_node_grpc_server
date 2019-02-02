@@ -2,90 +2,48 @@ defmodule Exred.Node.GrpcServerTest do
   use ExUnit.Case
   doctest Exred.Node.GrpcServer
 
+  use Exred.NodeTest, module: Exred.Node.GrpcServer
+
   setup_all do
-    GRPC.Server.start([Wtf.Server, Exredgrpc.Server], 10002)
-    {:ok, channel} = GRPC.Stub.connect("localhost:10002")
-    {:ok, %{ch: channel}}
+    ctx = start_node()
+    {:ok, channel} = GRPC.Stub.connect("localhost:#{inspect(ctx[:node].config.port.value)}")
+    Keyword.put(ctx, :ch, channel)
   end
 
-  test "greets the world" do
-    assert Exred.Node.GrpcServer.hello() == :world
+  test "create new message" do
+    p = Exredrpc.Msg.new(payload: %{"A" => "B"}, meta: %{"C" => "D"})
+    assert %Exredrpc.Msg{} = p
   end
 
-  test "wtf test unary grpc", state do
-    assert Wtf.TestService.Stub.ask(state.ch, Wtf.Request.new(text: "zsolt")) ==
-             {:ok, %Wtf.Reply{text: "zsolt"}}
+  @tag :capture_log
+  test "get stream", ctx do
+    stream = Exredrpc.MessageBus.Stub.chat(ctx.ch)
+    log("STREAM: #{inspect(stream)}")
+    assert %GRPC.Client.Stream{} = stream
   end
 
-  test "wtf test bidirectional stream", state do
-    stream = state.ch |> Wtf.TestService.Stub.chat()
+  @tag :capture_log
+  test "send through stream", ctx do
+    msg = Exredrpc.Msg.new(payload: %{"name" => "Joe"}, meta: %{"date" => "2019-12-12"})
 
-    requests =
-      Enum.map(1..5, fn n ->
-        Wtf.Request.new(text: "req-#{n}")
-      end)
+    resp_stream =
+      ctx.ch
+      |> Exredrpc.MessageBus.Stub.chat(metadata: %{"bondid" => "test"})
+      |> GRPC.Stub.send_request(msg)
+      |> GRPC.Stub.end_stream()
 
-    task =
-      Task.async(fn ->
-        Enum.reduce(requests, requests, fn _, [req | tail] ->
-          opts = if length(tail) == 0, do: [end_stream: true], else: []
-          GRPC.Stub.send_request(stream, req, opts)
-          tail
-        end)
-      end)
+    resp = GRPC.Stub.recv(resp_stream)
+    assert {:ok, result_enum} = resp
 
-    # GRPC.Stub.end_stream(stream)
-
-    {:ok, result_enum} = GRPC.Stub.recv(stream)
-    Task.await(task)
-
-    IO.inspect(result_enum, label: "client <~~ ")
-    assert length(Enum.to_list(result_enum)) == 5
-  end
-
-  test "wtf test bidirectional stream (simple)", state do
-    stream = state.ch |> Wtf.TestService.Stub.chat()
-    # create requests
-    requests =
-      Enum.map(1..5, fn n ->
-        Wtf.Request.new(text: "req-#{n}")
-      end)
-
-    # send requests
-    Enum.each(requests, fn req ->
-      GRPC.Stub.send_request(stream, req)
+    result_enum
+    |> Enum.each(fn r ->
+      log("Received: #{inspect(r)}")
     end)
-
-    GRPC.Stub.end_stream(stream)
-
-    # get replies
-    {:ok, reply_stream} = GRPC.Stub.recv(stream)
-
-    IO.inspect(reply_stream, label: "client <~~ ")
-    assert length(Enum.to_list(reply_stream)) == 5
   end
 
-  test "exredgrpc test bidirectional stream (simple)", state do
-    stream = state.ch |> Exredgrpc.NodeConnect.Stub.chat()
-    # create requests
-    requests =
-      Enum.map(1..5, fn n ->
-        Exredgrpc.NodeMsg.new(to: "req-#{n}")
-      end)
-
-    # send requests
-    Enum.each(requests, fn req ->
-      GRPC.Stub.send_request(stream, req)
-    end)
-
-    GRPC.Stub.end_stream(stream)
-
-    # get replies
-    {:ok, reply_stream} = GRPC.Stub.recv(stream)
-
-    IO.inspect(reply_stream, label: "CLIENT <~~ ")
-    replies = Enum.to_list(reply_stream)
-    Enum.each(replies, &IO.inspect(&1, label: "CLIENT <<< "))
-    assert length(replies) == 1
+  test "go client" do
+    cmd = Path.join([:code.priv_dir(:exred_node_grpc_server), "go", "client", "rpcclient"])
+    {_stdout, exit_code} = System.cmd(cmd, [])
+    assert exit_code == 0
   end
 end

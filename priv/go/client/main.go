@@ -21,7 +21,6 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-
 func randWord(n int) string {
 	b := make([]rune, n)
 	for i := range b {
@@ -63,13 +62,13 @@ func main() {
 	}
 
 	// start sending and receiving goroutines
-  // these transfer messages between the RPC streams and the incoming and outgoing channels
+	// these transfer messages between the RPC streams and the incoming and outgoing channels
 	go receiveMsg(incoming, rpcChatStream)
 	go sendMsg(outgoing, rpcChatStream)
 
-	// handle messages from the incoming channel 
+	// handle messages from the incoming channel
 	go handleMsg(incoming)
-	
+
 	// send some test data
 	// TODO: replace with something that sends actual data
 	sendUpdates(outgoing)
@@ -82,12 +81,17 @@ func main() {
 // takes messages from the outgoing channel and sends them out on the gRPC stream
 func sendMsg(outChan <-chan pb.Msg, stream pb.MessageBus_ChatClient) {
 	for {
-		msg := <-outChan
-
-		if err := stream.Send(&msg); err != nil {
+		msg, ok := <-outChan
+		if !ok { // outgoing channel was closed -> closing stream
+			stream.CloseSend()
+			break
+		}
+		err := stream.Send(&msg)
+		if err != nil {
 			log.Fatalf("Failed to send msg: %v\n", msg)
 		}
 	}
+
 }
 
 // receive messages from the gRPC stream and publish them to the incoming channnel
@@ -95,14 +99,14 @@ func receiveMsg(inChan chan<- pb.Msg, stream pb.MessageBus_ChatClient) {
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
-			fmt.Println("IN  EOF")
+			fmt.Println("IN EOF")
 			close(waitc)
 			return
 		}
 		if err != nil {
 			log.Fatalf("Failed to receive a message: %v\n", err)
 		}
-		fmt.Printf("IN  payload: %+v\n", in.Payload)
+		fmt.Printf("IN payload: %+v\n", in.Payload)
 		inChan <- *in
 	}
 }
@@ -110,23 +114,21 @@ func receiveMsg(inChan chan<- pb.Msg, stream pb.MessageBus_ChatClient) {
 // sends updates to the outgoing channel
 func sendUpdates(outChan chan<- pb.Msg) {
 	messages := []*pb.Msg{
-		{Payload: map[string]string{"from": "zsolt"}},
-		{Payload: map[string]string{"from": "joe"}},
+		{Payload: map[string]string{"from": "randWord", "password": randWord(10)}},
+		{Payload: map[string]string{"from": "randWord", "password": randWord(20)}},
 	}
 
-	for {
-		for _, msg := range messages {
-			outChan <- *msg
-			time.Sleep(time.Second)
-		}
-		time.Sleep(5 * time.Second)
+	for _, msg := range messages {
+		outChan <- *msg
+		time.Sleep(time.Second)
 	}
+	close(outChan)
 }
 
 // handles incoming messages
 func handleMsg(inChan <-chan pb.Msg) {
 	for {
 		msg := <-inChan
-		fmt.Println("### doing somehing with message", msg)
+		fmt.Println("### doing something with message", msg)
 	}
 }

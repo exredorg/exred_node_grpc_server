@@ -26,11 +26,11 @@ defmodule Exred.Node.GrpcServer do
 
   use Exred.NodePrototype
 
-  @impt true
+  @impl true
   def daemon_child_specs(config) do
     [
-      #{GRPC.Server.Supervisor, {Exredrpc.Server, config.port.value}},
-      {GRPC.Server.Supervisor, {Exredrpc.Server, 10001}
+      # {GRPC.Server.Supervisor, {Exredrpc.Server, config.port.value}},
+      {GRPC.Server.Supervisor, {Exredrpc.Server, 10001}},
       Exredrpc.Broker
     ]
   end
