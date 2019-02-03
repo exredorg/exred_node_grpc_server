@@ -1,21 +1,32 @@
-@startuml
+@startuml "RPC Client"
 skinparam componentStyle uml2
 
 component "GRPC Server" as server
 component sendMsg
 component receiveMsg
-
 () rpcChat
 
 server -- rpcChat
-
 rpcChat <-- sendMsg : GRPC\nstream
 rpcChat --> receiveMsg : GRPC\nstream
 
-component handleMsg
-component sendUpdates
 
-receiveMsg --> handleMsg : incoming\nchannel
-sendMsg <-- sendUpdates : outgoing\nchannel
+queue "incoming channel" as incoming
+queue "outgoing channel" as outgoing
+sendMsg <-- outgoing
+receiveMsg --> incoming
+
+
+component handleIncoming
+component sendAndClose
+component sendNonStop
+[pingPong]
+
+incoming --> handleIncoming
+outgoing <-- sendAndClose
+outgoing <-- sendNonStop
+
+outgoing <-- pingPong 
+incoming --> pingPong 
 
 @enduml

@@ -2,6 +2,7 @@ package main
 
 import (
 	pb "client/exredrpc"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -41,6 +42,13 @@ var (
 )
 
 func main() {
+	// read command line flags
+	sendMode := flag.Bool("send", false, "Run in send mode")
+	receiveMode := flag.Bool("receive", false, "Run in receive mode")
+	pingpongMode := flag.Bool("pingpong", false, "Run in ping pong mode")
+	bondID := flag.String("bondid", "test", "Specify bondId used when connecting to Exred")
+	flag.Parse()
+
 	// set up a connection to the grpc server
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
@@ -52,7 +60,7 @@ func main() {
 	client := pb.NewMessageBusClient(conn)
 
 	// create metadata for the RPC request
-	md := metadata.New(map[string]string{"bondId": "helloooo"})
+	md := metadata.New(map[string]string{"bondId": *bondID})
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 
 	// initiate request
@@ -66,12 +74,17 @@ func main() {
 	go receiveMsg(incoming, rpcChatStream)
 	go sendMsg(outgoing, rpcChatStream)
 
-	// handle messages from the incoming channel
-	go handleMsg(incoming)
-
-	// send some test data
-	// TODO: replace with something that sends actual data
-	sendUpdates(outgoing)
+	// start go routines to handle incoming messages and/or produce outgoing messages
+	if *receiveMode {
+		go handleIncoming(incoming)
+	} else if *sendMode {
+		go sendNonStop(outgoing)
+	} else if *pingpongMode {
+		go pingPong(incoming, outgoing)
+	} else {
+		go handleIncoming(incoming)
+		sendAndClose(outgoing)
+	}
 
 	// wait for RPC call end
 	<-waitc
@@ -91,7 +104,6 @@ func sendMsg(outChan <-chan pb.Msg, stream pb.MessageBus_ChatClient) {
 			log.Fatalf("Failed to send msg: %v\n", msg)
 		}
 	}
-
 }
 
 // receive messages from the gRPC stream and publish them to the incoming channnel
@@ -99,20 +111,19 @@ func receiveMsg(inChan chan<- pb.Msg, stream pb.MessageBus_ChatClient) {
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
-			fmt.Println("IN EOF")
+			fmt.Println("<<< IN EOF")
 			close(waitc)
 			return
 		}
 		if err != nil {
 			log.Fatalf("Failed to receive a message: %v\n", err)
 		}
-		fmt.Printf("IN payload: %+v\n", in.Payload)
 		inChan <- *in
 	}
 }
 
-// sends updates to the outgoing channel
-func sendUpdates(outChan chan<- pb.Msg) {
+// sends a few test messages to the outgoing channel and then closes the channel
+func sendAndClose(outChan chan<- pb.Msg) {
 	messages := []*pb.Msg{
 		{Payload: map[string]string{"from": "randWord", "password": randWord(10)}},
 		{Payload: map[string]string{"from": "randWord", "password": randWord(20)}},
@@ -125,10 +136,42 @@ func sendUpdates(outChan chan<- pb.Msg) {
 	close(outChan)
 }
 
+// continuously send test messages to the outgoing channel
+func sendNonStop(outChan chan<- pb.Msg) {
+	for {
+		message := pb.Msg{Payload: map[string]string{"from": "randWord", "password": randWord(10)}}
+		outChan <- message
+		time.Sleep(time.Second)
+	}
+}
+
+// ping pong
+func pingPong(inChan <-chan pb.Msg, outChan chan<- pb.Msg) {
+	out := pb.Msg{Payload: map[string]string{"data": "ping"}}
+
+	// keep sending pings until we get an answer
+	for len(inChan) == 0 {
+		outChan <- out
+		fmt.Println(">>> sent: ", out)
+		time.Sleep(time.Second)
+	}
+
+	// send ping after every pong received
+	for {
+		in := <-inChan
+		fmt.Println("<<< received: ", in)
+		data, ok := in.Payload["data"]
+		if ok && data == "pong" {
+			outChan <- out
+			fmt.Println(">>> sent: ", out)
+		}
+	}
+}
+
 // handles incoming messages
-func handleMsg(inChan <-chan pb.Msg) {
+func handleIncoming(inChan <-chan pb.Msg) {
 	for {
 		msg := <-inChan
-		fmt.Println("### doing something with message", msg)
+		fmt.Println("<<< received: ", msg)
 	}
 }

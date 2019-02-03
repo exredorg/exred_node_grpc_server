@@ -15,14 +15,12 @@ defmodule Exred.Node.GrpcServerTest do
     assert %Exredrpc.Msg{} = p
   end
 
-  @tag :capture_log
   test "get stream", ctx do
     stream = Exredrpc.MessageBus.Stub.chat(ctx.ch)
     log("STREAM: #{inspect(stream)}")
     assert %GRPC.Client.Stream{} = stream
   end
 
-  @tag :capture_log
   test "send through stream", ctx do
     msg = Exredrpc.Msg.new(payload: %{"name" => "Joe"}, meta: %{"date" => "2019-12-12"})
 
@@ -43,7 +41,8 @@ defmodule Exred.Node.GrpcServerTest do
 
   test "go client" do
     cmd = Path.join([:code.priv_dir(:exred_node_grpc_server), "go", "client", "rpcclient"])
-    {_stdout, exit_code} = System.cmd(cmd, [])
+    {stdout, exit_code} = System.cmd(cmd, [])
+    log(stdout)
     assert exit_code == 0
   end
 end
