@@ -31,8 +31,7 @@ defmodule Exred.Node.GrpcServer.MixProject do
       {:grpc, "~> 0.3.1"},
       {:protobuf, "~> 0.5.3"},
       {:google_protos, "~> 0.1"},
-      {:exred_nodetest, "~> 0.1.0", only: :test},
-      {:exred_node_grpc_twin, "~> 0.1.0", only: :test}
+      {:exred_nodetest, "~> 0.1.0", only: :test}
     ]
   end
 
@@ -41,10 +40,10 @@ defmodule Exred.Node.GrpcServer.MixProject do
       licenses: ["MIT"],
       maintainers: ["Zsolt Keszthelyi"],
       links: %{
-        "GitHub" => "https://github.com/exredorg/exred_node_grpc_server",
+        "GitHub" => "https://github.com/exredorg/exred_node_grpc_server.git",
         "Exred" => "http://exred.org"
       },
-      files: ["lib", "mix.exs", "README.md", "LICENSE"]
+      files: ["lib", "mix.exs", "README.md", "LICENSE", "VERSION"]
     }
   end
 end
